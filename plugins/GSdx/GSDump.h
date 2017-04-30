@@ -43,6 +43,8 @@ Regs data (id == 3)
 
 */
 
+#ifndef LZMA_SUPPORTED
+
 class GSDump
 {
 	FILE* m_gs;
@@ -60,3 +62,37 @@ public:
 	void VSync(int field, bool last, const GSPrivRegSet* regs);
 	operator bool() {return m_gs != NULL;}
 };
+
+#endif
+
+#ifdef LZMA_SUPPORTED
+
+#include <lzma.h>
+
+class GSDump
+{
+	FILE* m_gs;
+	int m_frames;
+	int m_extra_frames;
+
+	lzma_stream m_strm;
+
+	std::vector<uint8> m_in_buff;
+
+	void AppendRawData(const void *data, size_t size);
+	void AppendRawData(uint8);
+	void Compress(lzma_action action);
+
+public:
+	GSDump();
+	virtual ~GSDump();
+
+	void Open(const string& fn, uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
+	void Close();
+	void ReadFIFO(uint32 size);
+	void Transfer(int index, const uint8* mem, size_t size);
+	void VSync(int field, bool last, const GSPrivRegSet* regs);
+	operator bool() {return m_gs != nullptr;}
+};
+
+#endif
