@@ -43,56 +43,55 @@ Regs data (id == 3)
 
 */
 
-#ifndef LZMA_SUPPORTED
-
-class GSDump
+class GSDumpBase
 {
+protected:
 	FILE* m_gs;
 	int m_frames;
 	int m_extra_frames;
 
-public:
-	GSDump();
-	virtual ~GSDump();
+	std::vector<uint8> m_in_buff;
 
-	void Open(const string& fn, uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
-	void Close();
+	void Open(uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
+
+	void AppendRawData(const void *data, size_t size);
+	void AppendRawData(uint8 c);
+
+	virtual void Flush(bool close) = 0;
+
+public:
+	GSDumpBase(const string& fn);
+	virtual ~GSDumpBase();
+
 	void ReadFIFO(uint32 size);
 	void Transfer(int index, const uint8* mem, size_t size);
-	void VSync(int field, bool last, const GSPrivRegSet* regs);
-	operator bool() {return m_gs != NULL;}
+	bool VSync(int field, bool last, const GSPrivRegSet* regs);
 };
 
-#endif
+class GSDump : public GSDumpBase
+{
+public:
+	GSDump(const string& fn, uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
+	virtual ~GSDump();
+
+	void Flush(bool close) final;
+};
 
 #ifdef LZMA_SUPPORTED
 
 #include <lzma.h>
 
-class GSDump
+class GSDumpXz : public GSDumpBase
 {
-	FILE* m_gs;
-	int m_frames;
-	int m_extra_frames;
-
 	lzma_stream m_strm;
 
-	std::vector<uint8> m_in_buff;
-
-	void AppendRawData(const void *data, size_t size);
-	void AppendRawData(uint8);
 	void Compress(lzma_action action);
 
 public:
-	GSDump();
-	virtual ~GSDump();
+	GSDumpXz(const string& fn, uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
+	virtual ~GSDumpXz();
 
-	void Open(const string& fn, uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
-	void Close();
-	void ReadFIFO(uint32 size);
-	void Transfer(int index, const uint8* mem, size_t size);
-	void VSync(int field, bool last, const GSPrivRegSet* regs);
-	operator bool() {return m_gs != nullptr;}
+	void Flush(bool close) final;
 };
 
 #endif
